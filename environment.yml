@@ -1,0 +1,10 @@
+name: geospatial
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - gdal
+  - python=3.11.11  # (Specify your Python version if needed)
+  - paramiko
+  - dotenv
+  - temporalio
