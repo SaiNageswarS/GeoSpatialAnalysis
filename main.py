@@ -1,5 +1,7 @@
+import os
 import asyncio
 from datetime import timedelta
+from dotenv import load_dotenv
 
 from temporalio import workflow
 from temporalio.client import Client
@@ -41,7 +43,11 @@ class GeoSpatialAnalysis:
 
 
 async def main():
-    client = await Client.connect("localhost:7233")
+    load_dotenv()
+
+    temporal_host = os.getenv("TEMPORAL_SERVER")
+
+    client = await Client.connect(temporal_host)
     worker = Worker(
         client,
         task_queue="GeoSpatialAnalysisQueue",
