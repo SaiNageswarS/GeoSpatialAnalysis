@@ -10,6 +10,7 @@ from temporalio.worker import Worker
 from activities.compose_tiff import compose_tiff
 from activities.download_mosdac_data import download_mosdac_data
 from activities.scale_tiff import scale_tiff
+from util import connect_with_backoff
 
 
 @workflow.defn(name="GeoSpatialAnalysis")
@@ -47,7 +48,7 @@ async def main():
 
     temporal_host = os.getenv("TEMPORAL_SERVER")
 
-    client = await Client.connect(temporal_host)
+    client = await connect_with_backoff(temporal_host)
     worker = Worker(
         client,
         task_queue="GeoSpatialAnalysisQueue",
