@@ -1,8 +1,4 @@
-from temporalio import activity
-
-
-@activity.defn(name="upload_azure_storage")
-async def upload_azure_storage(container_name: str, path: str) -> list[str]:
+def upload_to_azure_storage(container_name: str, path: str) -> list[str]:
     import os
     from azure.storage.blob import BlobServiceClient, ContentSettings
     from dotenv import load_dotenv
@@ -56,3 +52,32 @@ async def upload_azure_storage(container_name: str, path: str) -> list[str]:
 
     return public_urls
 
+
+def download_files_from_urls(urls: list[str]) -> str:
+    import tempfile
+    import requests
+    from urllib.parse import urlparse
+    import os
+
+    download_dir = tempfile.mkdtemp(prefix="azure_download_")
+    local_paths = []
+
+    for url in urls:
+        parsed = urlparse(url)
+        path_parts = parsed.path.strip("/").split("/")[1:]  # Skip container name
+        local_path = os.path.join(download_dir, *path_parts)
+
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            with open(local_path, "wb") as f:
+                f.write(response.content)
+            local_paths.append(local_path)
+            print(f"Downloaded: {url} -> {local_path}")
+        else:
+            raise Exception(f"Failed to download {url}, status code: {response.status_code}")
+
+    if len(local_paths) == 1:
+        return local_paths[0]  # Single file path
+    return download_dir  # Folder containing multiple files

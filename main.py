@@ -10,7 +10,6 @@ from temporalio.worker import Worker
 from activities.compose_tiff import compose_tiff
 from activities.download_mosdac_data import download_mosdac_data
 from activities.scale_tiff import scale_tiff
-from activities.upload_azure_storage import upload_azure_storage
 from util import connect_with_backoff
 
 
@@ -41,13 +40,7 @@ class GeoSpatialAnalysis:
             start_to_close_timeout=timedelta(seconds=300),
         )
 
-        azure_path = await workflow.execute_activity(
-            upload_azure_storage,
-            args=[output_tiff],
-            start_to_close_timeout=timedelta(seconds=300),
-        )
-
-        return azure_path
+        return output_tiff
 
 
 async def main():

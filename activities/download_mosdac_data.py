@@ -3,9 +3,11 @@ import tempfile
 from dotenv import load_dotenv
 from temporalio import activity
 
+from activities.upload_azure_storage import upload_to_azure_storage
+
 
 @activity.defn(name="download_mosdac_data")
-async def download_mosdac_data(remote_path: str) -> str:
+async def download_mosdac_data(remote_path: str) -> list[str]:
     import paramiko  # ✅ Local import avoids workflow sandbox restriction
 
     load_dotenv()
@@ -28,7 +30,8 @@ async def download_mosdac_data(remote_path: str) -> str:
 
     transport.close()
 
-    return local_path
+    azure_urls = upload_to_azure_storage("mosdac-par", local_path)
+    return azure_urls
 
 
 def __download_sftp_recursive__(sftp_client, remote_path: str, local_path: str):

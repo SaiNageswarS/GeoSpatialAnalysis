@@ -1,12 +1,15 @@
 from temporalio import activity
 
+from activities.upload_azure_storage import download_files_from_urls, upload_to_azure_storage
+
 
 @activity.defn(name="compose_tiffs")
-async def compose_tiff(input_root: str) -> str:
+async def compose_tiff(azure_paths: list[str]) -> list[str]:
     import os
     import tempfile
     from osgeo import gdal
 
+    input_root = download_files_from_urls(azure_paths)
     output_tiff = os.path.join(input_root, "composed_output.tif")
 
     """Composes multiple TIFF files from different folders into a single output TIFF."""
@@ -29,4 +32,5 @@ async def compose_tiff(input_root: str) -> str:
     gdal.Translate(output_tiff, vrt_path, format="GTiff")
     print(f"Composed TIFF saved to {output_tiff}")
 
-    return output_tiff
+    azure_paths = upload_to_azure_storage("composeoutput", output_tiff)
+    return azure_paths

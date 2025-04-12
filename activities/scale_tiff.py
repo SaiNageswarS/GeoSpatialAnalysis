@@ -2,10 +2,13 @@ import os
 import tempfile
 from temporalio import activity
 
+from activities.upload_azure_storage import download_files_from_urls, upload_to_azure_storage
+
 
 @activity.defn(name="scale_tiff")
-async def scale_tiff(input_folder: str, scale_factor=0.5) -> str:
+async def scale_tiff(azure_paths: list[str], scale_factor=0.5) -> list[str]:
     """Recursively finds and scales all TIFF files in the input folder."""
+    input_folder = download_files_from_urls(azure_paths)
     print(f"Scaling tiff in {input_folder}")
     temp_root = tempfile.mkdtemp()
     temp_files = []
@@ -25,7 +28,8 @@ async def scale_tiff(input_folder: str, scale_factor=0.5) -> str:
                     temp_files.append(temp_output)
 
     print(f"All scaled TIFFs stored in {temp_root}")
-    return temp_root
+    azure_urls = upload_to_azure_storage("scaled-par", temp_root)
+    return azure_urls
 
 
 def __scale_tiff__(input_tiff: str, output_tiff: str, scale_factor=0.5) -> str:
