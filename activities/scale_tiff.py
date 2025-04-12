@@ -29,44 +29,34 @@ async def scale_tiff(input_folder: str, scale_factor=0.5) -> str:
 
 
 def __scale_tiff__(input_tiff: str, output_tiff: str, scale_factor=0.5) -> str:
-    from osgeo import gdal  # ✅ Import locally to avoid polluting workflow sandbox
+    from osgeo import gdal
+    import numpy as np
 
     # Open the source TIFF file
-    src_ds = gdal.Open(input_tiff, gdal.GA_ReadOnly)
-    if src_ds is None:
-        print("Error: Unable to open input TIFF file.")
-        return ""
+    dataset = gdal.Open(input_tiff, gdal.GA_ReadOnly)
+    driver = gdal.GetDriverByName('GTiff')
 
-    # Get original dimensions
-    width = src_ds.RasterXSize
-    height = src_ds.RasterYSize
-    bands = src_ds.RasterCount
+    # Get basic info
+    cols = dataset.RasterXSize
+    rows = dataset.RasterYSize
+    bands = dataset.RasterCount
+    geotransform = dataset.GetGeoTransform()
+    projection = dataset.GetProjection()
 
-    # Calculate new dimensions
-    new_width = int(width * scale_factor)
-    new_height = int(height * scale_factor)
+    # Create output GeoTIFF
+    out_ds = driver.Create(output_tiff, cols, rows, bands, gdal.GDT_Float32)
+    out_ds.SetGeoTransform(geotransform)
+    out_ds.SetProjection(projection)
 
-    # Get the driver for GeoTIFF
-    driver = gdal.GetDriverByName("GTiff")
+    # Process each band
+    for i in range(1, bands + 1):
+        band = dataset.GetRasterBand(i)
+        data = band.ReadAsArray().astype(np.float32)
+        data *= 0.5  # Multiply by 0.5
+        out_band = out_ds.GetRasterBand(i)
+        out_band.WriteArray(data)
+        out_band.SetNoDataValue(band.GetNoDataValue())
 
-    # Create the scaled output dataset
-    dst_ds = driver.Create(output_tiff, new_width, new_height, bands, gdal.GDT_Byte)
-
-    # Set geotransform and projection
-    dst_ds.SetGeoTransform(src_ds.GetGeoTransform())
-    dst_ds.SetProjection(src_ds.GetProjection())
-
-    # Resample each band
-    for band in range(1, bands + 1):
-        src_band = src_ds.GetRasterBand(band)
-        dst_band = dst_ds.GetRasterBand(band)
-
-        # Perform scaling using nearest neighbor interpolation
-        gdal.RegenerateOverview(src_band, dst_band, 'nearest')
-
-    # Clean up
-    dst_ds = None
-    src_ds = None
-
-    print(f"Scaled TIFF saved to {output_tiff}")
-    return output_tiff
+    # Cleanup
+    dataset = None
+    out_ds = None

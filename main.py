@@ -10,13 +10,14 @@ from temporalio.worker import Worker
 from activities.compose_tiff import compose_tiff
 from activities.download_mosdac_data import download_mosdac_data
 from activities.scale_tiff import scale_tiff
+from activities.upload_azure_storage import upload_azure_storage
 from util import connect_with_backoff
 
 
 @workflow.defn(name="GeoSpatialAnalysis")
 class GeoSpatialAnalysis:
     @workflow.run
-    async def run(self, args) -> str:
+    async def run(self, args) -> list[str]:
         print(f"🚨 Workflow Args: {args} ({type(args)})")
 
         # Step 1: Download the data
@@ -40,7 +41,13 @@ class GeoSpatialAnalysis:
             start_to_close_timeout=timedelta(seconds=300),
         )
 
-        return output_tiff
+        azure_path = await workflow.execute_activity(
+            upload_azure_storage,
+            args=[output_tiff],
+            start_to_close_timeout=timedelta(seconds=300),
+        )
+
+        return azure_path
 
 
 async def main():
