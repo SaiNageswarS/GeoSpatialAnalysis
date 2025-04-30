@@ -3,7 +3,7 @@ import tempfile
 from dotenv import load_dotenv
 from temporalio import activity
 
-from activities.upload_azure_storage import upload_to_azure_storage
+from azure_storage import upload_to_azure_storage
 
 
 @activity.defn(name="download_mosdac_data")

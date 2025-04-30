@@ -1,6 +1,6 @@
 from temporalio import activity
 
-from activities.upload_azure_storage import download_files_from_urls, upload_to_azure_storage
+from azure_storage import download_files_from_urls, upload_to_azure_storage
 
 
 @activity.defn(name="compose_tiffs")

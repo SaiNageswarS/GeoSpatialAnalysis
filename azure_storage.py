@@ -1,3 +1,10 @@
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
 def upload_to_azure_storage(container_name: str, path: str) -> list[str]:
     import os
     from azure.storage.blob import BlobServiceClient, ContentSettings
@@ -74,10 +81,11 @@ def download_files_from_urls(urls: list[str]) -> str:
             with open(local_path, "wb") as f:
                 f.write(response.content)
             local_paths.append(local_path)
-            print(f"Downloaded: {url} -> {local_path}")
+            logger.info(f"Downloaded: {url} -> {local_path}")
         else:
             raise Exception(f"Failed to download {url}, status code: {response.status_code}")
 
     if len(local_paths) == 1:
         return local_paths[0]  # Single file path
+
     return download_dir  # Folder containing multiple files

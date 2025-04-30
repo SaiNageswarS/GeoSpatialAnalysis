@@ -10,3 +10,10 @@ dependencies:
   - pip
   - pip:
     - temporalio
+    - azure-storage-blob
+    - geopandas
+    - rasterio
+    - earthaccess
+    - netCDF4
+    - shapely
+    - xarray
