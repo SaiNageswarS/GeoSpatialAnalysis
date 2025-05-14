@@ -25,12 +25,14 @@ class ProcessFapar:
 
         geotif_url = await workflow.execute_activity(
             convert_hdf_to_geotiff,
-            args=[fapar_data]
+            args=[fapar_data],
+            start_to_close_timeout=timedelta(seconds=300),
         )
 
         rescaled_tif = await workflow.execute_activity(
             scale_tiff,
-            args=[geotif_url, "fapar"]
+            args=[geotif_url, "fapar"],
+            start_to_close_timeout=timedelta(seconds=300),
         )
 
         return rescaled_tif
