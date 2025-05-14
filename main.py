@@ -12,6 +12,7 @@ from activities.compose_tiff import compose_tiff
 from activities.download_mosdac_data import download_mosdac_data
 from activities.scale_tiff import scale_tiff
 from activities.download_fapar_data import download_fapar_data
+from activities.convert_hdf_to_geotiff import convert_hdf_to_geotiff
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,7 +29,8 @@ async def main():
         client,
         task_queue="GeoSpatialAnalysisQueue",
         workflows=[ProcessMosdac, ProcessFapar],
-        activities=[download_mosdac_data, scale_tiff, compose_tiff, download_fapar_data],
+        activities=[download_mosdac_data, scale_tiff, compose_tiff,
+                    download_fapar_data, convert_hdf_to_geotiff],
     )
 
     logger.info("🚀 Starting Temporal Worker...")

@@ -7,6 +7,7 @@ dependencies:
   - python=3.11.11  # (Specify your Python version if needed)
   - paramiko
   - python-dotenv
+  - libgdal-hdf4
   - pip
   - pip:
     - temporalio
@@ -17,3 +18,5 @@ dependencies:
     - netCDF4
     - shapely
     - xarray
+    - h5py
+    - pyhdf

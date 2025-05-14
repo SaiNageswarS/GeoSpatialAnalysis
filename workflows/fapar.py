@@ -3,6 +3,8 @@ import logging
 from datetime import timedelta
 
 from activities.download_fapar_data import download_fapar_data
+from activities.convert_hdf_to_geotiff import convert_hdf_to_geotiff
+from activities.scale_tiff import scale_tiff
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,4 +23,14 @@ class ProcessFapar:
             start_to_close_timeout=timedelta(seconds=300),
         )
 
-        return fapar_data
+        geotif_url = await workflow.execute_activity(
+            convert_hdf_to_geotiff,
+            args=[fapar_data]
+        )
+
+        rescaled_tif = await workflow.execute_activity(
+            scale_tiff,
+            args=[geotif_url, "fapar"]
+        )
+
+        return rescaled_tif

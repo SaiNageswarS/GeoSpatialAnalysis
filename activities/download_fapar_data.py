@@ -2,7 +2,6 @@ import sys
 import tempfile
 import zipfile
 import logging
-from typing import List
 from temporalio import activity
 
 from pathlib import Path
@@ -21,7 +20,6 @@ async def download_fapar_data(start_date: str, end_date: str, shape_file_url: st
     import geopandas as gpd
     import earthaccess
 
-    """Main function."""
     try:
         load_dotenv()
         # Authenticate with NASA Earthdata
