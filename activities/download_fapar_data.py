@@ -2,11 +2,8 @@ import sys
 import tempfile
 import zipfile
 import logging
-from temporalio import activity
 
 from pathlib import Path
-
-from azure_storage import download_files_from_urls, upload_to_azure_storage
 from utils import validate_date_format
 
 # Set up logging
@@ -14,8 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-@activity.defn(name="download_fapar_data")
-async def download_fapar_data(start_date: str, end_date: str, shape_file_url: str) -> str:
+def download_fapar_data(start_date: str, end_date: str, shape_file: str) -> str:
     import geopandas as gpd
     import earthaccess
 
@@ -26,7 +22,6 @@ async def download_fapar_data(start_date: str, end_date: str, shape_file_url: st
         # Create temporary directory
         with tempfile.TemporaryDirectory() as temp_dir:
             # Extract shapefile
-            shape_file = download_files_from_urls([shape_file_url])
             shapefile_path = extract_shapefile(shape_file, temp_dir)
 
             # Read shapefile
@@ -46,10 +41,7 @@ async def download_fapar_data(start_date: str, end_date: str, shape_file_url: st
             output_files = earthaccess.download(granules, temp_dir)
             logger.info(f"Downloaded to {temp_dir}")
 
-            fapar_urls = upload_to_azure_storage('fapar', output_files[0])
-            logger.info("Processing complete.")
-
-            return fapar_urls[0]
+            return output_files[0]
 
     except Exception as e:
         logger.error(f"Error: {e}")

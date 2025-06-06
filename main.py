@@ -2,17 +2,16 @@ import os
 import asyncio
 from dotenv import load_dotenv
 import logging
+import configparser
+
+from azure_storage import AzureStorage
 
 from temporalio.worker import Worker
 from utils import connect_with_backoff
 from workflows.fapar import ProcessFapar
 from workflows.mosdac import ProcessMosdac
 
-from activities.compose_tiff import compose_tiff
-from activities.download_mosdac_data import download_mosdac_data
-from activities.scale_tiff import scale_tiff
-from activities.download_fapar_data import download_fapar_data
-from activities.convert_hdf_to_geotiff import convert_hdf_to_geotiff
+from activities.geo_spatial_activities import GeoSpatialActivities
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,16 +20,27 @@ logger = logging.getLogger(__name__)
 
 async def main():
     load_dotenv()
+    run_mode = os.getenv("ENV", "dev").lower()
 
-    temporal_host = os.getenv("TEMPORAL_SERVER")
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    env_config = dict(config[run_mode])
+
+    temporal_host = env_config["temporal_host_port"]
+
+    azure_storage = AzureStorage(env_config)
+    geo_spatial_activities = GeoSpatialActivities(env_config, azure_storage)
 
     client = await connect_with_backoff(temporal_host)
     worker = Worker(
         client,
         task_queue="GeoSpatialAnalysisQueue",
         workflows=[ProcessMosdac, ProcessFapar],
-        activities=[download_mosdac_data, scale_tiff, compose_tiff,
-                    download_fapar_data, convert_hdf_to_geotiff],
+        activities=[geo_spatial_activities.download_mosdac_data,
+                    geo_spatial_activities.scale_tif,
+                    geo_spatial_activities.compose_tifs,
+                    geo_spatial_activities.download_fapar_data,
+                    geo_spatial_activities.convert_hdf_to_geotiff],
     )
 
     logger.info("🚀 Starting Temporal Worker...")

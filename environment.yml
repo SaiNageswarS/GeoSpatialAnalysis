@@ -11,6 +11,7 @@ dependencies:
   - pip
   - pip:
     - temporalio
+    - azure-identity
     - azure-storage-blob
     - geopandas
     - rasterio

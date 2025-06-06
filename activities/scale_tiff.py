@@ -1,20 +1,16 @@
 import os
 import tempfile
-from temporalio import activity
 import logging
-
-from azure_storage import download_files_from_urls, upload_to_azure_storage
+from pathlib import Path
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-@activity.defn(name="scale_tiff")
-async def scale_tiff(original_tif_url: str, output_bucket: str, scale_factor=0.5) -> str:
+def scale_tiff(original_tif: str, scale_factor=0.5) -> Path:
     from osgeo import gdal
 
-    original_tif = download_files_from_urls([original_tif_url])
     logger.info(f"Scaling tiff {original_tif}")
 
     src_ds = gdal.Open(original_tif, gdal.GA_ReadOnly)
@@ -49,10 +45,11 @@ async def scale_tiff(original_tif_url: str, output_bucket: str, scale_factor=0.5
     # Create the output dataset
     driver = gdal.GetDriverByName('GTiff')
 
-    fd, output_tif_path = tempfile.mkstemp(suffix='.tif')
-    os.close(fd)
+    original_tif_file_name = Path(original_tif).name
+    temp_dir = tempfile.mkdtemp(prefix="scale_tif_")
+    output_tif_path = Path(temp_dir).joinpath(f"scaled_{original_tif_file_name}")
 
-    dst_ds = driver.Create(output_tif_path, dst_width, dst_height, band_count, data_type)
+    dst_ds = driver.Create(str(output_tif_path), dst_width, dst_height, band_count, data_type)
 
     if dst_ds is None:
         error_msg = f"Could not create output file: {output_tif_path}"
@@ -105,8 +102,6 @@ async def scale_tiff(original_tif_url: str, output_bucket: str, scale_factor=0.5
     src_ds = None  # Close the dataset
 
     logger.info(f"Successfully scaled GeoTIFF to {output_tif_path}")
-
-    azure_urls = upload_to_azure_storage(output_bucket, output_tif_path)
-    return azure_urls[0]
+    return output_tif_path
 
 

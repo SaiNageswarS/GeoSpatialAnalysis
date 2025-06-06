@@ -1,48 +1,68 @@
 import os
 import tempfile
-from temporalio import activity
+import logging
 
-from azure_storage import upload_to_azure_storage
+from typing import List
+from pathlib import Path
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
-@activity.defn(name="download_mosdac_data")
-async def download_mosdac_data(remote_path: str) -> list[str]:
-    import paramiko  # ✅ Local import avoids workflow sandbox restriction
+def download_mosdac_data(remote_path: str) -> list[Path]:
+    """
+    Recursively download every *.tif file found under `remote_path` on
+    MOSDAC's SFTP server into a *single* temporary directory.
 
-    # SFTP Credentials
+    Returns a list of Path objects pointing to the local copies.
+    """
+
+    import paramiko
+
     sftp_host = "download.mosdac.gov.in"
     sftp_port = 22
-    sftp_username = os.getenv("MOSDAC_USER_NAME")
-    sftp_password = os.getenv("MOSDAC_PASSWORD")
+    sftp_username = os.environ["MOSDAC_USER_NAME"]
+    sftp_password = os.environ["MOSDAC_PASSWORD"]
 
-    # SFTP Connection Options
+    # One temp directory that will contain all TIFFs flat.
+    local_root = Path(tempfile.mkdtemp(prefix="mosdac_flat_"))
+
     transport = paramiko.Transport((sftp_host, sftp_port))
-    transport.connect(username=sftp_username, password=sftp_password)
-
-    local_path = tempfile.mkdtemp()
-    with paramiko.SFTPClient.from_transport(transport) as sftp:
-        print("Connected to SFTP server")
-        __download_sftp_recursive__(sftp, remote_path, local_path)
-        print(f"Download completed to {local_path}.")
-
-    transport.close()
-
-    azure_urls = upload_to_azure_storage("mosdac-par", local_path)
-    return azure_urls
+    try:
+        transport.connect(username=sftp_username, password=sftp_password)
+        with paramiko.SFTPClient.from_transport(transport) as sftp:
+            logger.info("✅ Connected to SFTP server")
+            downloaded = _collect_tifs_flat(sftp, remote_path, local_root)
+            logger.info(f"📥  Downloaded {len(downloaded)} files into {local_root}")
+            return downloaded
+    finally:
+        transport.close()
 
 
-def __download_sftp_recursive__(sftp_client, remote_path: str, local_path: str):
-    import os  # fine, just for consistency
+def _collect_tifs_flat(
+        sftp,
+        remote_path: str,
+        local_root: Path,
+) -> list[Path]:
+    """
+    Walk `remote_dir`; for each *.tif file, download it into `local_root`.
 
-    if not os.path.exists(local_path):
-        os.makedirs(local_path)
+    `name_counts` keeps track of how many times we've already used a given
+    base filename so we can disambiguate clashes.
+    """
+    result: list[Path] = []
 
-    for entry in sftp_client.listdir_attr(remote_path):
+    logger.info(f"Listing {remote_path}")
+    for entry in sftp.listdir_attr(remote_path):
         remote_file = f"{remote_path}/{entry.filename}"
-        local_file = os.path.join(local_path, entry.filename)
 
-        if entry.st_mode & 0o40000:  # Directory
-            __download_sftp_recursive__(sftp_client, remote_file, local_file)
-        else:
-            print(f"Downloading {remote_file} to {local_file}")
-            sftp_client.get(remote_file, local_file)
+        if not entry.filename.lower().endswith(".tif"):
+            continue  # skip non-TIFFs
+
+        local_file = local_root.joinpath(entry.filename)
+        sftp.get(remote_file, str(local_file))
+
+        result.append(local_file)
+
+    return result

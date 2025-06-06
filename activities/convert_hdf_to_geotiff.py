@@ -1,22 +1,18 @@
 import logging
 import tempfile
-from temporalio import activity
-
-from azure_storage import download_files_from_urls, upload_to_azure_storage
+from pathlib import Path
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
-@activity.defn(name="convert_hdf_to_geotiff")
-async def convert_hdf_to_geotiff(hdf_file_url: str, required_dataset="Fpar_500m") -> str:
+def convert_hdf_to_geotiff(hdf_file: str, required_dataset="Fpar_500m") -> Path:
     import os
     from osgeo import gdal
     from pyhdf.SD import SD, SDC
     import numpy as np
 
-    hdf_file = download_files_from_urls([hdf_file_url])
     hdf = SD(hdf_file, SDC.READ)
 
     datasets = hdf.datasets().keys()
@@ -37,8 +33,9 @@ async def convert_hdf_to_geotiff(hdf_file_url: str, required_dataset="Fpar_500m"
     attributes = selected_dataset.attributes()
 
     # Create temporary file for GeoTIFF output
-    fd, temp_geotiff = tempfile.mkstemp(suffix='.tif')
-    os.close(fd)
+    original_hdf_file_name = os.path.splitext(os.path.basename(hdf_file))[0]
+    temp_dir = tempfile.mkdtemp(prefix="hdf_to_tif_")
+    output_geotiff = Path(temp_dir).joinpath(f"{original_hdf_file_name}.tif")
 
     # Get spatial metadata from the global attributes if available
     global_attributes = hdf.attributes()
@@ -110,7 +107,7 @@ async def convert_hdf_to_geotiff(hdf_file_url: str, required_dataset="Fpar_500m"
     rows, cols = data.shape
 
     # Create the output dataset
-    dst_ds = driver.Create(temp_geotiff, cols, rows, 1, gdal.GDT_Float32)
+    dst_ds = driver.Create(str(output_geotiff), cols, rows, 1, gdal.GDT_Float32)
 
     # Set geotransform and projection
     dst_ds.SetGeoTransform(geo_transform)
@@ -127,10 +124,10 @@ async def convert_hdf_to_geotiff(hdf_file_url: str, required_dataset="Fpar_500m"
     band.FlushCache()
     dst_ds = None  # Close the dataset
 
-    logger.info(f"Successfully converted HDF to GeoTIFF: {temp_geotiff}")
+    logger.info(f"Successfully converted HDF to GeoTIFF: {output_geotiff}")
 
-    geotiff_urls = upload_to_azure_storage('fapar', temp_geotiff)
-    return geotiff_urls[0]
+    return output_geotiff
+
 
 if __name__ == '__main__':
     convert_hdf_to_geotiff('https://spmfieldyieldestimation.blob.core.windows.net/fapar/MCD15A2H.A2024361.h25v06.061.2025004042727.hdf')
