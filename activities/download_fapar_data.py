@@ -5,7 +5,6 @@ import logging
 from temporalio import activity
 
 from pathlib import Path
-from dotenv import load_dotenv
 
 from azure_storage import download_files_from_urls, upload_to_azure_storage
 from utils import validate_date_format
@@ -21,7 +20,6 @@ async def download_fapar_data(start_date: str, end_date: str, shape_file_url: st
     import earthaccess
 
     try:
-        load_dotenv()
         # Authenticate with NASA Earthdata
         earthaccess.login()
 

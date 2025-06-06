@@ -16,7 +16,7 @@ class ProcessMosdac:
         input_folder = await workflow.execute_activity(
             download_mosdac_data,
             args=[args["remote_path"]],
-            start_to_close_timeout=timedelta(seconds=300),
+            start_to_close_timeout=timedelta(seconds=3000),
         )
 
         # Step 2: Scale the TIFF files
@@ -25,7 +25,7 @@ class ProcessMosdac:
             scaled_url = await workflow.execute_activity(
                 scale_tiff,
                 args=[file_path, "mosdac-par", args["scale_factor"]],
-                start_to_close_timeout=timedelta(seconds=300),
+                start_to_close_timeout=timedelta(seconds=3000),
             )
             scaled_urls.append(scaled_url)
 
@@ -33,7 +33,7 @@ class ProcessMosdac:
         output_tiff = await workflow.execute_activity(
             compose_tiff,
             args=[scaled_urls],
-            start_to_close_timeout=timedelta(seconds=300),
+            start_to_close_timeout=timedelta(seconds=3000),
         )
 
         return output_tiff

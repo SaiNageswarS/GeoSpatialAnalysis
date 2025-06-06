@@ -1,7 +1,6 @@
 import logging
 import tempfile
 from temporalio import activity
-from dotenv import load_dotenv
 
 from azure_storage import download_files_from_urls, upload_to_azure_storage
 
@@ -16,8 +15,6 @@ async def convert_hdf_to_geotiff(hdf_file_url: str, required_dataset="Fpar_500m"
     from osgeo import gdal
     from pyhdf.SD import SD, SDC
     import numpy as np
-
-    load_dotenv()
 
     hdf_file = download_files_from_urls([hdf_file_url])
     hdf = SD(hdf_file, SDC.READ)

@@ -8,9 +8,6 @@ logger = logging.getLogger(__name__)
 def upload_to_azure_storage(container_name: str, path: str) -> list[str]:
     import os
     from azure.storage.blob import BlobServiceClient, ContentSettings
-    from dotenv import load_dotenv
-
-    load_dotenv()
 
     account_name = os.getenv("AZURE_STORAGE_ACCOUNT")
     connection_string = os.getenv("AZURE_STORAGE_CONNECTION")

@@ -1,6 +1,5 @@
 import os
 import tempfile
-from dotenv import load_dotenv
 from temporalio import activity
 
 from azure_storage import upload_to_azure_storage
@@ -9,8 +8,6 @@ from azure_storage import upload_to_azure_storage
 @activity.defn(name="download_mosdac_data")
 async def download_mosdac_data(remote_path: str) -> list[str]:
     import paramiko  # ✅ Local import avoids workflow sandbox restriction
-
-    load_dotenv()
 
     # SFTP Credentials
     sftp_host = "download.mosdac.gov.in"
